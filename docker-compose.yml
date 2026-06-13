@@ -1,0 +1,17 @@
+services:
+  proxy:
+    build: .
+    container_name: simple-http-proxy
+    ports:
+      - "8088:8088"
+      - "9090:9090"
+    environment:
+      - PROXY_PORT=8088
+      - ADMIN_PORT=9090
+      - ADMIN_USER=admin
+      - ADMIN_PASS=admin
+      - LOG_ACCESS=true
+      - TIMEOUT_SECONDS=300
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

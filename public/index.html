@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Proxy Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>:root{--bg:#0a0a14;--bg2:#12122a;--bg3:#1a1a34;--bg4:#222244;--text:#d0d0e0;--text2:#8888aa;--border:#2a2a50;--accent:#6c6cf0;--accent2:#8b5cf6;--green:#34d399;--red:#f87171;--orange:#fbbf24;--blue:#60a5fa;--radius:10px;--shadow:0 2px 12px rgba(0,0,0,.4)}
+.light{--bg:#f4f4f9;--bg2:#ffffff;--bg3:#f0f0f5;--bg4:#e4e4ed;--text:#1a1a2e;--text2:#666680;--border:#d0d0dd;--accent:#5c5ce0;--accent2:#7c5cf0;--shadow:0 2px 12px rgba(0,0,0,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;transition:background .3s,color .3s}
+/* Sidebar */
+.sidebar{width:56px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;transition:background .3s}
+.sidebar .logo{height:48px;display:flex;align-items:center;justify-content:center;color:var(--accent);font-weight:700;font-size:18px;border-bottom:1px solid var(--border)}
+.sidebar nav{flex:1;display:flex;flex-direction:column;padding:8px 0;gap:2px}
+.sidebar nav a{display:flex;align-items:center;justify-content:center;height:44px;color:var(--text2);text-decoration:none;font-size:14px;position:relative;transition:color .2s;border-radius:0}
+.sidebar nav a:hover{color:var(--text);background:var(--bg3)}
+.sidebar nav a.active{color:var(--accent);background:var(--bg3)}
+.sidebar nav a.active::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:3px;background:var(--accent);border-radius:0 3px 3px 0}
+.sidebar .bottom{display:flex;flex-direction:column;padding:4px;gap:2px;border-top:1px solid var(--border)}
+.sidebar .bottom button,.sidebar .bottom a{height:36px;border:none;background:transparent;color:var(--text2);font-size:16px;cursor:pointer;border-radius:8px;transition:all .2s;display:flex;align-items:center;justify-content:center;text-decoration:none}
+.sidebar .bottom button:hover,.sidebar .bottom a:hover{background:var(--bg3);color:var(--text)}
+/* Main */
+.main{margin-left:56px;flex:1;padding:20px 28px;max-width:1300px}
+.page{display:none}.page.active{display:block}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.page-header h2{font-size:18px;font-weight:600;color:var(--text)}
+.page-header .sub{font-size:12px;color:var(--text2);margin-top:2px}
+/* Cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+.card{background:var(--bg2);border-radius:var(--radius);padding:16px 18px;border:1px solid var(--border);transition:transform .15s,box-shadow .15s}
+.card:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+.card .lbl{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
+.card .val{font-size:22px;font-weight:700;margin-top:4px;color:var(--text)}
+.card .val.c1{color:var(--blue)}.card .val.c2{color:var(--green)}.card .val.c3{color:var(--accent)}.card .val.c4{color:var(--orange)}.card .val.c5{color:var(--red)}
+.card .sub{font-size:11px;color:var(--text2);margin-top:2px}
+/* Panel */
+.panel{background:var(--bg2);border-radius:var(--radius);border:1px solid var(--border);padding:20px;margin-bottom:16px}
+.panel h3{font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+/* Charts row */
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.chart-box{background:var(--bg2);border-radius:var(--radius);border:1px solid var(--border);padding:16px;position:relative}
+.chart-box h3{font-size:12px;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px}
+.chart-box canvas{max-height:200px}
+/* Table */
+.table-wrap{background:var(--bg2);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;margin-bottom:16px}
+.table-wrap.tbl-scroll{max-height:360px;overflow-y:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:10px 14px;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);background:var(--bg3);position:sticky;top:0;z-index:1}
+td{padding:9px 14px;font-size:13px;border-bottom:1px solid var(--border);color:var(--text)}
+tr:hover td{background:var(--bg3)}
+.empty{text-align:center;padding:40px;color:var(--text2);font-size:13px}
+/* Form */
+.form-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+input,select{padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;outline:none;transition:border-color .2s}
+input:focus,select:focus{border-color:var(--accent)}
+input{flex:1;min-width:160px}
+.btn{padding:9px 18px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-pri{background:var(--accent);color:#fff}.btn-pri:hover{filter:brightness(1.15)}
+.btn-sec{background:var(--bg3);color:var(--text);border:1px solid var(--border)}.btn-sec:hover{background:var(--bg4)}
+.btn-dan{background:var(--red);color:#fff}.btn-dan:hover{filter:brightness(1.15)}
+.btn-sm{padding:6px 12px;font-size:11px}
+.btn-icon{width:32px;height:32px;padding:0;justify-content:center;font-size:14px;border-radius:8px}
+/* Badge */
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600}
+.badge-i{background:rgba(96,165,250,.15);color:var(--blue)}
+.badge-w{background:rgba(251,191,36,.15);color:var(--orange)}
+.badge-e{background:rgba(248,113,113,.15);color:var(--red)}
+.badge-s{background:rgba(52,211,153,.15);color:var(--green)}
+/* Alert */
+.alert{padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:13px;display:none}
+.alert-s{display:block;background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.alert-e{display:block;background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.2)}
+/* Switch */
+.toggle{position:relative;display:inline-block;width:36px;height:20px;cursor:pointer}
+.toggle input{display:none}
+.toggle .sl{position:absolute;inset:0;background:var(--bg4);border-radius:10px;transition:.2s}
+.toggle .sl::before{content:'';position:absolute;width:16px;height:16px;left:2px;bottom:2px;background:#fff;border-radius:50%;transition:.2s}
+.toggle input:checked+.sl{background:var(--accent)}
+.toggle input:checked+.sl::before{transform:translateX(16px)}
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+/* Activity dot */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.dot-live{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:6px;animation:pulse 2s infinite}
+/* Responsive */
+@media(max-width:768px){
+  .chart-row{grid-template-columns:1fr}
+  .main{padding:14px;margin-left:56px}
+  .cards{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){
+  .cards{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="logo">&#9670;</div>
+  <nav>
+    <a href="#" data-page="dashboard" class="active" title="Dashboard">&#9632;</a>
+    <a href="#" data-page="whitelist" title="IP Whitelist">&#9673;</a>
+    <a href="#" data-page="stats" title="Statistics">&#9776;</a>
+    <a href="#" data-page="logs" title="Logs">&#9998;</a>
+    <a href="#" data-page="unauthorized" title="Blocked">&#9888;</a>
+  </nav>
+  <div class="bottom">
+    <button id="themeBtn" title="Toggle theme">&#9788;</button>
+    <button id="langBtn" title="Language">&#9993;</button>
+    <a href="#" data-page="settings" title="Settings">&#9881;</a>
+  </div>
+</div>
+
+<div class="main">
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header"><div><h2 id="dashTitle">Dashboard</h2><div class="sub" id="dashSub">Real-time proxy overview</div></div></div>
+    <div class="cards" id="summaryCards"></div>
+    <div class="chart-row">
+      <div class="chart-box"><h3 id="dashLineTitle">Requests / hour</h3><canvas id="lineChart" height="180"></canvas></div>
+      <div class="chart-box"><h3 id="dashBarTitle">Bandwidth / hour</h3><canvas id="barChart" height="180"></canvas></div>
+    </div>
+    <div class="chart-box" style="margin-bottom:16px"><h3 id="dashTrendTitle">7-Day Trend</h3><canvas id="trendChart" height="120"></canvas></div>
+    <div class="panel"><h3 id="dashTopTitle">Top Targets</h3><div class="table-wrap tbl-scroll" style="max-height:260px"><table><thead><tr><th id="thHost">Host</th><th id="thReq">Requests</th><th id="thSent">Sent</th><th id="thRecv">Received</th></tr></thead><tbody id="topHostsBody"></tbody></table></div></div>
+  </div>
+
+  <!-- WHITELIST -->
+  <div class="page" id="page-whitelist">
+    <div class="page-header"><div><h2 id="wlTitle">IP Whitelist</h2><div class="sub" id="wlSub">Manage allowed client IPs</div></div></div>
+    <div id="wlAlert" class="alert"></div>
+    <div class="form-row">
+      <input type="text" id="ipInput" placeholder="Enter IP address">
+      <button class="btn btn-pri" id="wlAddBtn" onclick="addIp()">+ Add IP</button>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th id="thIP">IP Address</th><th style="width:80px" id="thAction">Action</th></tr></thead><tbody id="whitelistBody"></tbody></table></div>
+  </div>
+
+  <!-- STATISTICS -->
+  <div class="page" id="page-stats">
+    <div class="page-header"><div><h2 id="statsTitle">Statistics</h2><div class="sub" id="statsSub">Detailed traffic analysis</div></div>
+      <div class="form-row" style="margin:0;gap:6px">
+        <button class="btn btn-sec btn-sm" id="statsRefreshBtn" onclick="loadStatsPage()">&#8635;</button>
+        <button class="btn btn-dan btn-sm" id="statsResetBtn" onclick="resetStats()">&#10005;</button>
+      </div>
+    </div>
+    <div class="panel"><h3 id="statsByIPTitle">By IP</h3><div class="table-wrap tbl-scroll" style="max-height:300px"><table><thead><tr><th id="thIP2">IP</th><th id="thReq2">Requests</th><th id="thSent2">Sent</th><th id="thRecv2">Received</th></tr></thead><tbody id="statsByIpBody"></tbody></table></div></div>
+    <div class="panel"><h3 id="statsByHostTitle">By Host</h3><div class="table-wrap tbl-scroll" style="max-height:300px"><table><thead><tr><th id="thHost2">Host</th><th id="thReq3">Requests</th><th id="thSent3">Sent</th><th id="thRecv3">Received</th></tr></thead><tbody id="statsByHostBody"></tbody></table></div></div>
+    <div class="panel"><h3 id="statsRecentTitle">Recent Activity</h3><div class="table-wrap tbl-scroll" style="max-height:360px"><table><thead><tr><th id="thTime">Time</th><th id="thIP3">IP</th><th id="thHost3">Host</th><th id="thMeth">Method</th><th id="thStatus">Status</th><th id="thSize">Size</th></tr></thead><tbody id="recentActivityBody"></tbody></table></div></div>
+  </div>
+
+  <!-- LOGS -->
+  <div class="page" id="page-logs">
+    <div class="page-header"><div><h2 id="logsTitle">System Logs</h2><div class="sub" id="logsSub">Proxy and admin activity</div></div>
+      <div class="form-row" style="margin:0;gap:6px">
+        <select id="logFilter" onchange="loadLogs()" style="width:auto;min-width:100px">
+          <option value="">All</option><option value="system">System</option><option value="config">Config</option><option value="access">Access</option>
+        </select>
+        <button class="btn btn-sec btn-sm" onclick="loadLogs()">&#8635;</button>
+        <button class="btn btn-dan btn-sm" onclick="clearLogs()">&#10005;</button>
+      </div>
+    </div>
+    <div class="panel"><h3 id="logsAutoTitle">Auto-Clear Settings</h3>
+      <div class="form-row" style="margin-bottom:0">
+        <label class="toggle" id="autoClearToggle"><input type="checkbox" id="autoClearCheck" onchange="saveAutoClear()"><span class="sl"></span></label>
+        <span style="font-size:13px" id="autoClearLabel">Auto-clear old logs</span>
+        <span style="color:var(--text2);font-size:12px;margin-left:8px" id="autoClearDetail">(24h / 10000 max)</span>
+      </div>
+    </div>
+    <div class="table-wrap tbl-scroll" style="max-height:500px"><table><thead><tr><th style="width:140px" id="thTime2">Time</th><th style="width:60px" id="thLevel">Level</th><th style="width:70px" id="thType">Type</th><th id="thMsg">Message</th></tr></thead><tbody id="logsBody"></tbody></table></div>
+  </div>
+
+  <!-- UNAUTHORIZED -->
+  <div class="page" id="page-unauthorized">
+    <div class="page-header"><div><h2 id="unauthTitle">Blocked Access</h2><div class="sub" id="unauthSub">Unauthorized connection attempts</div></div>
+      <div class="form-row" style="margin:0;gap:6px">
+        <button class="btn btn-sec btn-sm" onclick="loadUnauth()">&#8635;</button>
+        <button class="btn btn-dan btn-sm" onclick="clearUnauth()">&#10005;</button>
+      </div>
+    </div>
+    <div class="table-wrap tbl-scroll" style="max-height:600px"><table><thead><tr><th style="width:140px" id="thTime3">Time</th><th id="thIP4">IP</th><th id="thTarget">Target</th><th style="width:70px" id="thMeth2">Method</th></tr></thead><tbody id="unauthBody"></tbody></table></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="page" id="page-settings">
+    <div class="page-header"><div><h2 id="settingsTitle">Settings</h2><div class="sub" id="settingsSub">Admin configuration</div></div></div>
+    <div id="settingsAlert" class="alert"></div>
+    <div class="panel"><h3 id="settingsCredTitle">Admin Credentials</h3>
+      <div class="form-row"><input type="text" id="setUser" placeholder="Username" style="max-width:200px"><input type="password" id="setPass" placeholder="New password (min 4 chars)" style="max-width:240px"><button class="btn btn-pri btn-sm" onclick="saveCredentials()" id="settingsSaveBtn">Save</button></div>
+    </div>
+    <div class="panel"><h3 id="settingsThemeTitle">Display</h3>
+      <div class="form-row" style="margin-bottom:0">
+        <label class="toggle"><input type="checkbox" id="darkModeCheck" onchange="toggleTheme()"><span class="sl"></span></label>
+        <span style="font-size:13px" id="darkModeLabel">Dark Mode</span>
+        <span style="margin-left:16px;font-size:13px" id="langLabel">Language</span>
+        <select id="langSelect" onchange="switchLang(this.value)" style="width:auto;min-width:80px"><option value="zh">中文</option><option value="en">English</option></select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ I18N ============
+const L = {
+  zh: {
+    dashTitle:'仪表盘',dashSub:'实时代理概览',dashLineTitle:'请求数 / 小时',dashBarTitle:'流量 / 小时',dashTrendTitle:'7日趋势',dashTopTitle:'热门目标',
+    wlTitle:'IP 白名单',wlSub:'管理允许的客户端 IP',wlAddBtn:'+ 添加 IP',
+    statsTitle:'统计',statsSub:'详细流量分析',statsByIPTitle:'按 IP',statsByHostTitle:'按目标',statsRecentTitle:'最近活动',
+    logsTitle:'系统日志',logsSub:'代理和管理活动',logsAutoTitle:'自动清理设置',autoClearLabel:'自动清理旧日志',autoClearDetail:'(24小时 / 10000条上限)',
+    unauthTitle:'被拦截的访问',unauthSub:'未授权的连接尝试',
+    settingsTitle:'设置',settingsSub:'管理配置',settingsCredTitle:'管理员凭证',settingsSaveBtn:'保存',settingsThemeTitle:'显示',darkModeLabel:'深色模式',langLabel:'语言',
+    thHost:'目标',thReq:'请求',thSent:'发送',thRecv:'接收',thIP:'IP 地址',thAction:'操作',thIP2:'IP',thReq2:'请求',thSent2:'发送',thRecv2:'接收',
+    thHost2:'目标',thReq3:'请求',thSent3:'发送',thRecv3:'接收',thTime:'时间',thIP3:'IP',thHost3:'目标',thMeth:'方法',thStatus:'状态',thSize:'流量',
+    thTime2:'时间',thLevel:'级别',thType:'类型',thMsg:'消息',thTime3:'时间',thIP4:'IP',thTarget:'目标',thMeth2:'方法',
+    totalRequests:'总请求',bandwidthSent:'上行流量',bandwidthRecv:'下行流量',activeIps:'活跃 IP',unauthCount:'拦截数',
+    noData:'暂无数据',delete:'删除',refresh:'刷新',reset:'重置',clearAll:'清空',
+    reqHour:'请求/时',mbHour:'MB/时',
+    info:'信息',warn:'警告',error:'错误',
+    saved:'已保存',failed:'操作失败',
+  },
+  en: {
+    dashTitle:'Dashboard',dashSub:'Real-time proxy overview',dashLineTitle:'Requests / hour',dashBarTitle:'Bandwidth / hour',dashTrendTitle:'7-Day Trend',dashTopTitle:'Top Targets',
+    wlTitle:'IP Whitelist',wlSub:'Manage allowed client IPs',wlAddBtn:'+ Add IP',
+    statsTitle:'Statistics',statsSub:'Detailed traffic analysis',statsByIPTitle:'By IP',statsByHostTitle:'By Host',statsRecentTitle:'Recent Activity',
+    logsTitle:'System Logs',logsSub:'Proxy and admin activity',logsAutoTitle:'Auto-Clear Settings',autoClearLabel:'Auto-clear old logs',autoClearDetail:'(24h / 10000 max)',
+    unauthTitle:'Blocked Access',unauthSub:'Unauthorized connection attempts',
+    settingsTitle:'Settings',settingsSub:'Admin configuration',settingsCredTitle:'Admin Credentials',settingsSaveBtn:'Save',settingsThemeTitle:'Display',darkModeLabel:'Dark Mode',langLabel:'Language',
+    thHost:'Host',thReq:'Requests',thSent:'Sent',thRecv:'Received',thIP:'IP Address',thAction:'Action',thIP2:'IP',thReq2:'Requests',thSent2:'Sent',thRecv2:'Received',
+    thHost2:'Host',thReq3:'Requests',thSent3:'Sent',thRecv3:'Received',thTime:'Time',thIP3:'IP',thHost3:'Host',thMeth:'Method',thStatus:'Status',thSize:'Size',
+    thTime2:'Time',thLevel:'Level',thType:'Type',thMsg:'Message',thTime3:'Time',thIP4:'IP',thTarget:'Target',thMeth2:'Method',
+    totalRequests:'Total Requests',bandwidthSent:'Sent',bandwidthRecv:'Received',activeIps:'Active IPs',unauthCount:'Blocked',
+    noData:'No data yet',delete:'Delete',refresh:'Refresh',reset:'Reset',clearAll:'Clear All',
+    reqHour:'req/h',mbHour:'MB/h',
+    info:'Info',warn:'Warning',error:'Error',
+    saved:'Saved',failed:'Operation failed',
+  }
+};
+let lang = localStorage.getItem('lang') || 'zh';
+function t(k){return (L[lang]||L.zh)[k]||k}
+function applyLang(){
+  const map={
+    dashTitle:'dashTitle',dashSub:'dashSub',dashLineTitle:'dashLineTitle',dashBarTitle:'dashBarTitle',dashTrendTitle:'dashTrendTitle',dashTopTitle:'dashTopTitle',
+    wlTitle:'wlTitle',wlSub:'wlSub',wlAddBtn:'wlAddBtn',
+    statsTitle:'statsTitle',statsSub:'statsSub',statsByIPTitle:'statsByIPTitle',statsByHostTitle:'statsByHostTitle',statsRecentTitle:'statsRecentTitle',
+    logsTitle:'logsTitle',logsSub:'logsSub',logsAutoTitle:'logsAutoTitle',autoClearLabel:'autoClearLabel',autoClearDetail:'autoClearDetail',
+    unauthTitle:'unauthTitle',unauthSub:'unauthSub',
+    settingsTitle:'settingsTitle',settingsSub:'settingsSub',settingsCredTitle:'settingsCredTitle',settingsSaveBtn:'settingsSaveBtn',settingsThemeTitle:'settingsThemeTitle',darkModeLabel:'darkModeLabel',langLabel:'langLabel',
+    thHost:'thHost',thReq:'thReq',thSent:'thSent',thRecv:'thRecv',thIP:'thIP',thAction:'thAction',
+    thIP2:'thIP2',thReq2:'thReq2',thSent2:'thSent2',thRecv2:'thRecv2',
+    thHost2:'thHost2',thReq3:'thReq3',thSent3:'thSent3',thRecv3:'thRecv3',
+    thTime:'thTime',thIP3:'thIP3',thHost3:'thHost3',thMeth:'thMeth',thStatus:'thStatus',thSize:'thSize',
+    thTime2:'thTime2',thLevel:'thLevel',thType:'thType',thMsg:'thMsg',
+    thTime3:'thTime3',thIP4:'thIP4',thTarget:'thTarget',thMeth2:'thMeth2',
+  };
+  for(const[id,key] of Object.entries(map)){
+    const el=document.getElementById(id);
+    if(el) el.textContent=t(key);
+  }
+  loadDashboard();
+}
+function switchLang(v){lang=v;localStorage.setItem('lang',v);document.documentElement.lang=v==='zh'?'zh-CN':'en';applyLang();}
+
+// ============ THEME ============
+function setTheme(dark){
+  document.body.classList.toggle('light',!dark);
+  document.getElementById('darkModeCheck').checked=dark;
+  localStorage.setItem('theme',dark?'dark':'light');
+}
+function toggleTheme(){
+  setTheme(!document.getElementById('darkModeCheck').checked);
+  if(document.querySelector('.sidebar nav a.active')?.dataset.page==='dashboard') loadDashboard();
+}
+function initTheme(){
+  const t=localStorage.getItem('theme')||'dark';
+  setTheme(t==='dark');
+}
+initTheme();
+
+// Theme/Lang sidebar buttons
+document.getElementById('themeBtn').addEventListener('click',toggleTheme);
+document.getElementById('langBtn').addEventListener('click',()=>{
+  const langs=['zh','en'];const idx=(langs.indexOf(lang)+1)%langs.length;
+  document.getElementById('langSelect').value=langs[idx];
+  switchLang(langs[idx]);
+});
+
+// ============ NAV ============
+document.querySelectorAll('.sidebar a[data-page]').forEach(a=>{
+  a.addEventListener('click',e=>{
+    e.preventDefault();
+    document.querySelectorAll('.sidebar nav a').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+    a.classList.add('active');
+    const pg=a.dataset.page;
+    document.getElementById('page-'+pg).classList.add('active');
+    if(pg==='dashboard') loadDashboard();
+    if(pg==='whitelist') loadWhitelist();
+    if(pg==='stats') loadStatsPage();
+    if(pg==='logs') loadLogs();
+    if(pg==='unauthorized') loadUnauth();
+    if(pg==='settings') loadSettings();
+  });
+});
+
+// ============ HELPERS ============
+function bytes(v){
+  if(!v) return '0 B';
+  const u=['B','KB','MB','GB','TB'];let i=0;let s=v;
+  while(s>=1024&&i<u.length-1){s/=1024;i++}
+  return s.toFixed(s>=10?1:2)+' '+u[i];
+}
+function timeAgo(ts){const s=Math.floor((Date.now()-ts)/1000);if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'m';return Math.floor(s/3600)+'h';}
+function fmtTime(ts){return new Date(ts).toLocaleString()}
+function showAlert(id,msg,type){const el=document.getElementById(id);el.textContent=msg;el.className='alert alert-'+(type||'s');setTimeout(()=>{el.style.display='none'},3000);}
+
+// ============ CHARTS (optimized - decimated data, throttled) ============
+let lineChart, barChart, trendChart;
+let chartDataCache = null;
+function chartGrid(){return document.body.classList.contains('light')?'rgba(0,0,0,.06)':'rgba(255,255,255,.04)'}
+function chartTick(){return document.body.classList.contains('light')?'#999':'#888'}
+
+async function getTimeline(hours){
+  if(chartDataCache) return chartDataCache;
+  const r=await fetch('/api/stats/timeline?hours='+hours);
+  const d=await r.json();
+  chartDataCache=d;
+  setTimeout(()=>{chartDataCache=null},30000);
+  return d;
+}
+
+async function loadDashboard(){
+  try{
+    const [summary,byHost,timeline,trendData]=await Promise.all([
+      fetch('/api/stats/summary').then(r=>r.json()),
+      fetch('/api/stats/byhost').then(r=>r.json()),
+      getTimeline(24),
+      getTimeline(168)
+    ]);
+
+    document.getElementById('summaryCards').innerHTML=[
+      {l:t('totalRequests'),v:summary.totalRequests.toLocaleString(),c:'c1',s:summary.recentRequests+' today'},
+      {l:t('bandwidthSent'),v:bytes(summary.totalBytesSent),c:'c2',s:bytes(summary.recentBytesSent)+' today'},
+      {l:t('bandwidthRecv'),v:bytes(summary.totalBytesReceived),c:'c3',s:bytes(summary.recentBytesReceived)+' today'},
+      {l:t('activeIps'),v:summary.activeIps,c:'c4',s:summary.whitelistCount+' whitelisted'},
+      {l:t('unauthCount'),v:summary.unauthorizedCount,c:'c5',s:''},
+    ].map(c=>`<div class="card"><div class="lbl">${c.l}</div><div class="val ${c.c}">${c.v}</div><div class="sub">${c.s}</div></div>`).join('');
+
+    // Top hosts
+    const hosts=Object.entries(byHost.byHost).sort((a,b)=>b[1].requests-a[1].requests).slice(0,15);
+    document.getElementById('topHostsBody').innerHTML=hosts.length?hosts.map(([h,d])=>`<tr><td>${h}</td><td>${d.requests}</td><td>${bytes(d.bytesSent)}</td><td>${bytes(d.bytesReceived)}</td></tr>`).join(''):'<tr><td colspan="4" class="empty">'+t('noData')+'</td></tr>';
+
+    // Line chart (requests/hour)
+    const labels=timeline.timeline.map(t=>{const d=new Date(t.ts);return String(d.getHours()).padStart(2,'0')+':00'});
+    const reqData=timeline.timeline.map(t=>t.requests);
+
+    if(lineChart) lineChart.destroy();
+    lineChart=new Chart(document.getElementById('lineChart'),{
+      type:'line',
+      data:{labels,datasets:[{label:t('reqHour'),data:reqData,borderColor:'#6c6cf0',backgroundColor:'rgba(108,108,240,0.08)',fill:true,tension:.3,pointRadius:1.5,borderWidth:1.5}]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(0,0,0,.8)',titleFont:{size:11},bodyFont:{size:11}}},
+        scales:{x:{ticks:{color:chartTick(),maxTicksLimit:10,font:{size:10}},grid:{color:chartGrid()}},
+          y:{beginAtZero:true,ticks:{color:chartTick(),font:{size:10},precision:0},grid:{color:chartGrid()}}}}
+    });
+
+    // Bar chart (bandwidth/hour)
+    const bwData=timeline.timeline.map(t=>+(t.bytes/1048576).toFixed(2));
+    if(barChart) barChart.destroy();
+    barChart=new Chart(document.getElementById('barChart'),{
+      type:'bar',
+      data:{labels,datasets:[{label:t('mbHour'),data:bwData,backgroundColor:'rgba(52,211,153,.4)',borderColor:'rgba(52,211,153,.8)',borderWidth:1,borderRadius:2}]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(0,0,0,.8)',titleFont:{size:11},bodyFont:{size:11},callbacks:{label:ctx=>ctx.parsed.y+' MB'}}},
+        scales:{x:{ticks:{color:chartTick(),maxTicksLimit:10,font:{size:10}},grid:{color:chartGrid()}},
+          y:{beginAtZero:true,ticks:{color:chartTick(),font:{size:10}},grid:{color:chartGrid()}}}}
+    });
+
+    // Trend (7 day - 4h intervals)
+    if(trendData.timeline){
+      const tl=trendData.timeline;
+      const tLabels=tl.map(t=>{const d=new Date(t.ts);return (d.getMonth()+1)+'/'+d.getDate()+' '+d.getHours()+':00'});
+      const tReq=tl.map(t=>t.requests);
+      const tBw=tl.map(t=>+(t.bytes/1048576).toFixed(2));
+
+      if(trendChart) trendChart.destroy();
+
+      // Show every Nth label to reduce clutter
+      const step=Math.max(1,Math.floor(tLabels.length/12));
+
+      trendChart=new Chart(document.getElementById('trendChart'),{
+        type:'line',
+        data:{
+          labels:tLabels.map((l,i)=>i%step===0?l:''),
+          datasets:[
+            {label:'Requests',data:tReq,borderColor:'#60a5fa',backgroundColor:'rgba(96,165,250,.05)',fill:true,tension:.3,pointRadius:0,borderWidth:1.5,yAxisID:'y'},
+            {label:'MB',data:tBw,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.05)',fill:true,tension:.3,pointRadius:0,borderWidth:1.5,yAxisID:'y1'}
+          ]
+        },
+        options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+          plugins:{legend:{labels:{color:chartTick(),font:{size:10},boxWidth:12,boxHeight:12,padding:12}},
+            tooltip:{backgroundColor:'rgba(0,0,0,.8)',titleFont:{size:11},bodyFont:{size:11}}},
+          scales:{
+            x:{ticks:{color:chartTick(),font:{size:9},maxRotation:0},grid:{color:chartGrid()}},
+            y:{beginAtZero:true,position:'left',ticks:{color:chartTick(),font:{size:9},precision:0},grid:{color:chartGrid()}},
+            y1:{beginAtZero:true,position:'right',ticks:{color:'#f59e0b',font:{size:9}},grid:{display:false}}
+          }}
+      });
+    }
+  }catch(e){console.error('dash error:',e)}
+}
+
+// ============ IP WHITELIST ============
+async function loadWhitelist(){
+  try{
+    const r=await fetch('/api/whitelist');const d=await r.json();
+    const b=document.getElementById('whitelistBody');
+    if(!d.ips.length){b.innerHTML='<tr><td colspan="2" class="empty">'+t('noData')+'</td></tr>';return}
+    b.innerHTML=d.ips.map(i=>`<tr><td>${i.ip}</td><td><button class="btn btn-dan btn-sm" onclick="removeIp('${i.ip}')">${t('delete')}</button></td></tr>`).join('');
+  }catch(e){}
+}
+async function addIp(){
+  const ip=document.getElementById('ipInput').value.trim();
+  if(!ip){showAlert('wlAlert','Enter an IP','e');return}
+  try{
+    const r=await fetch('/api/whitelist',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip})});
+    const d=await r.json();
+    if(d.success){showAlert('wlAlert','IP: '+ip,'s');document.getElementById('ipInput').value='';loadWhitelist()}
+    else showAlert('wlAlert',d.error||t('failed'),'e');
+  }catch(e){showAlert('wlAlert',t('failed'),'e')}
+}
+async function removeIp(ip){
+  const r=await fetch('/api/whitelist/'+encodeURIComponent(ip),{method:'DELETE'});
+  const d=await r.json();
+  if(d.success){showAlert('wlAlert','Removed: '+ip,'s');loadWhitelist()}
+}
+document.getElementById('ipInput').addEventListener('keydown',e=>{if(e.key==='Enter')addIp()});
+
+// ============ STATS PAGE ============
+async function loadStatsPage(){
+  try{
+    const [byIpData,byHostData,histData]=await Promise.all([
+      fetch('/api/stats/byip').then(r=>r.json()),
+      fetch('/api/stats/byhost').then(r=>r.json()),
+      fetch('/api/stats/history?limit=200').then(r=>r.json())
+    ]);
+    const byIp=byIpData.byIp||{};const byHost=byHostData.byHost||{};
+    const ipB=document.getElementById('statsByIpBody');
+    const ipE=Object.entries(byIp).sort((a,b)=>b[1].requests-a[1].requests);
+    ipB.innerHTML=ipE.length?ipE.map(([ip,d])=>`<tr><td>${ip}</td><td>${d.requests}</td><td>${bytes(d.bytesSent)}</td><td>${bytes(d.bytesReceived)}</td></tr>`).join(''):'<tr><td colspan="4" class="empty">'+t('noData')+'</td></tr>';
+    const hB=document.getElementById('statsByHostBody');
+    const hE=Object.entries(byHost).sort((a,b)=>b[1].requests-a[1].requests);
+    hB.innerHTML=hE.length?hE.map(([h,d])=>`<tr><td>${h}</td><td>${d.requests}</td><td>${bytes(d.bytesSent)}</td><td>${bytes(d.bytesReceived)}</td></tr>`).join(''):'<tr><td colspan="4" class="empty">'+t('noData')+'</td></tr>';
+    document.getElementById('recentActivityBody').innerHTML=histData.history.length?histData.history.map(h=>`<tr><td>${fmtTime(h.ts)}</td><td>${h.ip}</td><td>${h.host}</td><td>${h.method}</td><td><span class="badge badge-${h.status<300?'s':h.status<400?'i':'e'}">${h.status}</span></td><td>${bytes(h.bytesSent+h.bytesReceived)}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">'+t('noData')+'</td></tr>';
+  }catch(e){}
+}
+async function resetStats(){
+  if(!confirm('Reset?'))return;
+  await fetch('/api/stats/reset',{method:'POST'});
+  loadDashboard();loadStatsPage();
+}
+
+// ============ LOGS ============
+async function loadLogs(){
+  try{
+    const type=document.getElementById('logFilter').value;
+    const r=await fetch('/api/logs?limit=200'+(type?'&type='+type:''));const d=await r.json();
+    document.getElementById('logsBody').innerHTML=d.logs.length?d.logs.map(l=>{
+      const lvlCls=l.level==='warn'?'w':l.level==='error'?'e':'i';
+      const typeCls=l.type==='system'?'i':l.type==='config'?'s':l.type==='access'?'w':'i';
+      return `<tr><td style="font-size:11px;color:var(--text2)">${fmtTime(l.ts)}</td><td><span class="badge badge-${lvlCls}">${t(l.level==='warn'?'warn':l.level==='error'?'error':'info')}</span></td><td><span class="badge badge-${typeCls}">${l.type}</span></td><td style="font-size:12px">${l.msg}</td></tr>`;
+    }).join(''):'<tr><td colspan="4" class="empty">'+t('noData')+'</td></tr>';
+  }catch(e){}
+}
+async function clearLogs(){
+  await fetch('/api/logs',{method:'DELETE'});loadLogs();
+}
+async function saveAutoClear(){
+  const enabled=document.getElementById('autoClearCheck').checked;
+  await fetch('/api/config/autoclear',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled})});
+}
+
+// ============ UNAUTHORIZED ============
+async function loadUnauth(){
+  try{
+    const r=await fetch('/api/unauthorized?limit=200');const d=await r.json();
+    document.getElementById('unauthBody').innerHTML=d.list.length?d.list.map(u=>`<tr><td style="font-size:11px;color:var(--text2)">${fmtTime(u.ts)}</td><td>${u.ip}</td><td style="font-size:12px;color:var(--text2)">${u.target||'-'}</td><td><span class="badge badge-w">${u.method}</span></td></tr>`).join(''):'<tr><td colspan="4" class="empty">'+t('noData')+'</td></tr>';
+  }catch(e){}
+}
+async function clearUnauth(){
+  await fetch('/api/unauthorized',{method:'DELETE'});loadUnauth();
+}
+
+// ============ SETTINGS ============
+async function loadSettings(){
+  try{
+    const r=await fetch('/api/config');const d=await r.json();
+    document.getElementById('setUser').value=d.user||'admin';
+    document.getElementById('autoClearCheck').checked=d.autoClear?.enabled!==false;
+  }catch(e){}
+}
+async function saveCredentials(){
+  const user=document.getElementById('setUser').value.trim();
+  const pass=document.getElementById('setPass').value.trim();
+  if(!user||user.length<2){showAlert('settingsAlert','Username min 2 chars','e');return}
+  const body={user};
+  if(pass.length>=4) body.pass=pass;
+  try{
+    const r=await fetch('/api/config/credentials',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(d.success){showAlert('settingsAlert',t('saved'),'s');document.getElementById('setPass').value='';}
+    else showAlert('settingsAlert',t('failed'),'e');
+  }catch(e){showAlert('settingsAlert',t('failed'),'e')}
+}
+
+// ============ LANG INIT ============
+document.getElementById('langSelect').value=lang;
+document.documentElement.lang=lang==='zh'?'zh-CN':'en';
+applyLang();
+
+// Auto-refresh dashboard every 30s
+setInterval(()=>{const pg=document.querySelector('.sidebar nav a.active');if(pg&&pg.dataset.page==='dashboard')loadDashboard()},30000);
+</script>
+</body>
+</html>

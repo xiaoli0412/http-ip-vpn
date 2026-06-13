@@ -1,0 +1,9 @@
+{
+  "name": "simple-http-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HTTP proxy with IP whitelist and admin panel",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
